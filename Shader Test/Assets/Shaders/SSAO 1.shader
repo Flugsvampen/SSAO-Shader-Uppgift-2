@@ -2,9 +2,9 @@
 
 Shader "Hidden/SSAO" {
     Properties{
-        _MainTex("", 2D) = "" {}
-    _RandomTexture("", 2D) = "" {}
-    _SSAO("", 2D) = "" {}
+        _MainTex("Main Texture", 2D) = "" {}
+    _RandomTexture("Noise Texture", 2D) = "" {}
+    _SSAO("SSAO", 2D) = "" {}
     }
         Subshader{
         ZTest Always Cull Off ZWrite Off Fog{ Mode Off }
@@ -44,9 +44,6 @@ Shader "Hidden/SSAO" {
 #	include "frag_ao.cginc"
 
 #	define INPUT_SAMPLE_COUNT 26
-#	include "frag_ao.cginc"
-
-#	define INPUT_SAMPLE_COUNT 34
 #	include "frag_ao.cginc"
 
 #else

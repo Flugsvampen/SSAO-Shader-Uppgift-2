@@ -100,11 +100,11 @@
 					offset.xy = offset.xy * 0.5f + 0.5f;
 
 					// Get sample depth
-					float sampleDepth = tex2D(, offset.xy).r; // UNFINISHED
+					//float sampleDepth = tex2D(, offset.xy).r; // UNFINISHED
 
 					// Range check and accumulate
-					float rangeCheck = abs(origin.z - sampleDepth) < _Radius ? 1.0f : 0.0f; // POTENTIAL SHIT
-					occlusion += (sampleDepth <= _sample.z ? 1.0f : 0.0f) * rangeCheck; // POTENTIAL SHIT
+					//float rangeCheck = abs(origin.z - sampleDepth) < _Radius ? 1.0f : 0.0f; // POTENTIAL SHIT
+					//occlusion += (sampleDepth <= _sample.z ? 1.0f : 0.0f) * rangeCheck; // POTENTIAL SHIT
 				}
 
 				occlusion = 1.0 - (occlusion / _KernelSize);
