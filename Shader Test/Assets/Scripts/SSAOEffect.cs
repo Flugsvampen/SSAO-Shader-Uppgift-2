@@ -14,9 +14,8 @@ public class SSAOEffect : MonoBehaviour
     }
 
     [Range(0, 16)]public int noiseSize = 4;
-    [Range(0.05f, 1.0f)]public float radius = 0.4f;             
-    public SSAOSamples sampleCount = SSAOSamples.Medium;        
-    [Range(0.5f, 4f)]public float occlusionIntensity = 1.5f;    
+    [Range(0.05f, 1.0f)]public float radius = 0.4f;
+    [Range(0.5f, 4f)]public float occlusionIntensity = 1.5f;
     [Range(0f, 4f)]public float blur = 2f;
     [Range(1, 6)]public int downsampling = 2;
     [Range(0.2f, 2f)]public float occlusionAttenuation = 1.0f;
@@ -96,7 +95,7 @@ public class SSAOEffect : MonoBehaviour
         SSAOMaterial.SetVector("_Params", new Vector4(radius, minZ, 1.0f / occlusionAttenuation, occlusionIntensity));
 
         bool doBlur = blur > 0;
-        Graphics.Blit(doBlur ? null : source, rtAO, SSAOMaterial, (int)sampleCount);
+        Graphics.Blit(doBlur ? null : source, rtAO, SSAOMaterial, 0);
 
         if (doBlur)
         {
@@ -105,7 +104,7 @@ public class SSAOEffect : MonoBehaviour
             SSAOMaterial.SetVector("_TexelOffsetScale",
                 new Vector4(blur / source.width, 0, 0, 0));
             SSAOMaterial.SetTexture("_SSAO", rtAO);
-            Graphics.Blit(null, rtBlurX, SSAOMaterial, 3);
+            Graphics.Blit(null, rtBlurX, SSAOMaterial, 1);
             RenderTexture.ReleaseTemporary(rtAO); // original rtAO not needed anymore
 
             // Blur SSAO vertically
@@ -113,7 +112,7 @@ public class SSAOEffect : MonoBehaviour
             SSAOMaterial.SetVector("_TexelOffsetScale",
                 new Vector4(0, blur / source.height, 0, 0));
             SSAOMaterial.SetTexture("_SSAO", rtBlurX);
-            Graphics.Blit(source, rtBlurY, SSAOMaterial, 3);
+            Graphics.Blit(source, rtBlurY, SSAOMaterial, 1);
             RenderTexture.ReleaseTemporary(rtBlurX); // blurX RT not needed anymore
 
             rtAO = rtBlurY; // AO is the blurred one now
@@ -121,7 +120,7 @@ public class SSAOEffect : MonoBehaviour
 
         // Modulate scene rendering with SSAO
         SSAOMaterial.SetTexture("_SSAO", rtAO);
-        Graphics.Blit(source, destination, SSAOMaterial, 4);
+        Graphics.Blit(source, destination, SSAOMaterial, 2);
 
         RenderTexture.ReleaseTemporary(rtAO);
     }
