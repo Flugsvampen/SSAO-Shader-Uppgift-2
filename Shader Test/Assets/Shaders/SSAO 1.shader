@@ -12,18 +12,22 @@
         ZTest Always Cull Off ZWrite Off Fog{ Mode Off }
 
         CGINCLUDE
-        // Common code used by several SSAO passes below
 		#include "UnityCG.cginc"
 		#pragma exclude_renderers gles
+
+		uniform float2 _NoiseScale;
+		float4 _CameraDepthNormalsTexture_ST;
+
+		sampler2D _CameraDepthNormalsTexture;
+		sampler2D _RandomTexture;
+		float4 _Params; // x=radius, y=minz, z=attenuation power, w=SSAO power
+
         struct v2f_ao 
 		{
 			float4 pos : POSITION;
 			float2 uv : TEXCOORD0;
 			float2 uvr : TEXCOORD1;
 		};
-
-		uniform float2 _NoiseScale;
-		float4 _CameraDepthNormalsTexture_ST;
 
 		v2f_ao vert_ao(appdata_img v)
 		{
@@ -34,21 +38,8 @@
 			return o;
 		}
 
-		sampler2D _CameraDepthNormalsTexture;
-		sampler2D _RandomTexture;
-		float4 _Params; // x=radius, y=minz, z=attenuation power, w=SSAO power
-
-		#if defined(SHADER_API_XBOX360)|| defined(SHADER_API_D3D11)
-
 		#define INPUT_SAMPLE_COUNT 26
 		#include "frag_ao.cginc"
-
-		#else
-
-		#define INPUT_SAMPLE_COUNT
-		#include "frag_ao.cginc"
-
-		#endif
 
 		ENDCG
 
@@ -193,8 +184,8 @@
 			{
 				v2f o;
 				o.pos = UnityObjectToClipPos(v.vertex);
-				o.uv[0] = MultiplyUV(UNITY_MATRIX_TEXTURE0, v.texcoord);
-				o.uv[1] = MultiplyUV(UNITY_MATRIX_TEXTURE1, v.texcoord);
+				o.uv[1] = v.texcoord;//mul(UNITY_MATRIX_TEXTURE1, v.texcoord);
+				o.uv[0] = v.texcoord;//mul(UNITY_MATRIX_TEXTURE0, v.texcoord);
 				return o;
 			}
 
@@ -203,15 +194,14 @@
 
 			half4 frag(v2f i) : COLOR
 			{
-				half4 c = tex2D(_MainTex, i.uv[0]);
+				half4 output = tex2D(_MainTex, i.uv[1]);
 				half ao = tex2D(_SSAO, i.uv[1]).r;
 				ao = pow(ao, _Params.w);
-				c.rgb *= ao;
-				return c;
+				output.rgb *= ao;
+				return output;
 			}
 			ENDCG
 		}
-
     }
     Fallback off
 }

@@ -1,46 +1,59 @@
 half frag_ao(v2f_ao i, int sampleCount, float3 samples[INPUT_SAMPLE_COUNT])
 {
-    // read random normal from noise texture
-    half3 randN = tex2D(_RandomTexture, i.uvr).xyz * 2.0 - 1.0;
+    // Gets random normal from noise texture
+    half3 randNormal = tex2D(_RandomTexture, i.uvr).xyz * 2.0 - 1.0;
 
-    // read scene depth/normal
-    float4 depthnormal = tex2D(_CameraDepthNormalsTexture, i.uv);
-    float3 viewNorm;
+    // Gets depth, view normal and depthNormal
+    float4 depthNormal = tex2D(_CameraDepthNormalsTexture, i.uv);
+    float3 viewNormal;
     float depth;
-    DecodeDepthNormal(depthnormal, depth, viewNorm);
+    DecodeDepthNormal(depthNormal, depth, viewNormal);
+
+	// Multiples depth with the cameras far planes distance
     depth *= _ProjectionParams.z;
+
+	// Calculates scale of samples by dividing its radius with depth
     float scale = _Params.x / depth;
 
-    // accumulated occlusion factor
+    // Total occlusion factor
     float occ = 0.0;
+
     for (int s = 0; s < sampleCount; ++s)
     {
-        // Reflect sample direction around a random vector
-        half3 randomDir = reflect(samples[s], randN);
+        // Reflects sample direction around a random vector
+        half3 randomDir = reflect(samples[s], randNormal);
 
         // Make it point to the upper hemisphere
-        half flip = (dot(viewNorm, randomDir)<0) ? 1.0 : -1.0;
+        half flip = (dot(viewNormal, randomDir)<0) ? 1.0 : -1.0;
         randomDir *= -flip;
-        // Add a bit of normal to reduce self shadowing
-        randomDir += viewNorm * 0.3;
+
+        // Adds a bit of normal to reduce self shadowing
+		randomDir += viewNormal * 0.3;
 
         float2 offset = randomDir.xy * scale;
-        float sD = depth - (randomDir.z * _Params.x);
 
-        // Sample depth at offset location
-        float4 sampleND = tex2D(_CameraDepthNormalsTexture, i.uv + offset);
-        float sampleD;
-        float3 sampleN;
-        DecodeDepthNormal(sampleND, sampleD, sampleN);
-        sampleD *= _ProjectionParams.z;
-        float zd = saturate(sD - sampleD);
-        if (zd > _Params.y) {
+        float sampleD = depth - (randomDir.z * _Params.x);
+
+        // Sample depth with offset position
+        float4 sampleDepthNormal = tex2D(_CameraDepthNormalsTexture, i.uv + offset);
+        float sampleDepth;
+        float3 sampleNormal;
+        DecodeDepthNormal(sampleDepthNormal, sampleDepth, sampleNormal);
+
+		// Multiples sample depth with the cameras far planes distance
+		sampleDepth *= _ProjectionParams.z;
+
+		// Gets normalized Z depth
+        float zDepth = saturate(sampleD - sampleDepth);
+
+		// If the Z depth is greater than the minimum required Z depth
+        if (zDepth > _Params.y)
+		{
             // This sample occludes, contribute to occlusion
-            occ += pow(1 - zd, _Params.z); // sc2
-                                           //occ += 1.0-saturate(pow(1.0 - zd, 11.0) + zd); // nullsq
-                                           //occ += 1.0/(1.0+zd*zd*10); // iq
+            occ += pow(1 - zDepth, _Params.z);
         }
     }
+
     occ /= sampleCount;
     return 1 - occ;
 }

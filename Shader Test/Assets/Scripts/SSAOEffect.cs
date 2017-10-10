@@ -17,18 +17,18 @@ public class SSAOEffect : MonoBehaviour
     [Range(0.05f, 1.0f)]public float radius = 0.4f;
     [Range(0.5f, 4f)]public float occlusionIntensity = 1.5f;
     [Range(0f, 4f)]public float blur = 2f;
-    [Range(1, 6)]public int downsampling = 2;
+    //[Range(1, 6)]public int downsampling = 2;
     [Range(0.2f, 2f)]public float occlusionAttenuation = 1.0f;
     [Range(0.00001f, 0.5f)]public float minZ = 0.01f;
 
-    public Material SSAOMaterial;
+    public Material SSAO_mat;
 
-    private Texture2D m_NoiseTex;
+    private Texture2D noiseTex;
     
 
     void Start()
     {
-        m_NoiseTex = GenerateNoiseTex();
+        noiseTex = GenerateNoiseTex();
         Camera.main.depthTextureMode |= DepthTextureMode.DepthNormals;
     }
 
@@ -39,28 +39,25 @@ public class SSAOEffect : MonoBehaviour
 
         for (int i = 0; i < noiseSize * noiseSize; i++)
         {
-            noise[i] = new Color(
-            Random.Range(0.0f, 1.0f),
-            Random.Range(0.0f, 1.0f),
-            0.0f);
+            noise[i] = new Color(Random.Range(0.0f, 1.0f), Random.Range(0.0f, 1.0f), 0.0f);
         }
-        m_NoiseTex = new Texture2D(noiseSize, noiseSize);
 
-        m_NoiseTex.SetPixels(noise);
+        noiseTex = new Texture2D(noiseSize, noiseSize);
+        noiseTex.SetPixels(noise);
 
-        SSAOMaterial.SetTexture("_RandomTexture", m_NoiseTex);
+        SSAO_mat.SetTexture("_RandomTexture", noiseTex);
 
-        return m_NoiseTex;
+        return noiseTex;
     }
 
 
     [ImageEffectOpaque]
     void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
-        // Render SSAO term into a smaller texture
-        RenderTexture rtAO = RenderTexture.GetTemporary(source.width / downsampling, source.height / downsampling, 0);
-        
-        float fovY = Camera.main.fieldOfView;
+        // Temporary RenderTexture for SSAO
+        RenderTexture rtAO = RenderTexture.GetTemporary(source.width, source.height, 0);
+
+        /*float fovY = Camera.main.fieldOfView;
 
         // Gets distance to the far clip plane
         float z = Camera.main.farClipPlane;
@@ -72,15 +69,15 @@ public class SSAOEffect : MonoBehaviour
         float x = y * Camera.main.aspect;
 
         // Sets the _FarCorner variable as the same as the top right corner of the far clip plane with the previously calculated coordinates
-        SSAOMaterial.SetVector("_FarCorner", new Vector3(x, y, z));
+        SSAO_mat.SetVector("_FarCorner", new Vector3(x, y, z));*/
 
         int noiseWidth, noiseHeight;
 
         // If the noise texture exist, we get its size
-        if (m_NoiseTex)
+        if (noiseTex)
         {
-            noiseWidth = m_NoiseTex.width;
-            noiseHeight = m_NoiseTex.height;
+            noiseWidth = noiseTex.width;
+            noiseHeight = noiseTex.height;
         }
         // Sets size to 1. This prevents errors when in edit mode where the noise texture isn't generated
         else
@@ -90,37 +87,37 @@ public class SSAOEffect : MonoBehaviour
         }
 
         // Sets the scale of the noise by dividing the render textures size with the noises size
-        SSAOMaterial.SetVector("_NoiseScale", new Vector3((float)rtAO.width / noiseWidth, (float)rtAO.height / noiseHeight, 0.0f));
+        SSAO_mat.SetVector("_NoiseScale", new Vector3((float)rtAO.width / noiseWidth, (float)rtAO.height / noiseHeight, 0.0f));
         
-        SSAOMaterial.SetVector("_Params", new Vector4(radius, minZ, 1.0f / occlusionAttenuation, occlusionIntensity));
+        SSAO_mat.SetVector("_Params", new Vector4(radius, minZ, 1.0f / occlusionAttenuation, occlusionIntensity));
 
         bool doBlur = blur > 0;
-        Graphics.Blit(doBlur ? null : source, rtAO, SSAOMaterial, 0);
+        Graphics.Blit(doBlur ? null : source, rtAO, SSAO_mat, 0);
 
         if (doBlur)
         {
             // Blur SSAO horizontally
             RenderTexture rtBlurX = RenderTexture.GetTemporary(source.width, source.height, 0);
-            SSAOMaterial.SetVector("_TexelOffsetScale",
+            SSAO_mat.SetVector("_TexelOffsetScale",
                 new Vector4(blur / source.width, 0, 0, 0));
-            SSAOMaterial.SetTexture("_SSAO", rtAO);
-            Graphics.Blit(null, rtBlurX, SSAOMaterial, 1);
+            SSAO_mat.SetTexture("_SSAO", rtAO);
+            Graphics.Blit(null, rtBlurX, SSAO_mat, 1);
             RenderTexture.ReleaseTemporary(rtAO); // original rtAO not needed anymore
 
             // Blur SSAO vertically
             RenderTexture rtBlurY = RenderTexture.GetTemporary(source.width, source.height, 0);
-            SSAOMaterial.SetVector("_TexelOffsetScale",
+            SSAO_mat.SetVector("_TexelOffsetScale",
                 new Vector4(0, blur / source.height, 0, 0));
-            SSAOMaterial.SetTexture("_SSAO", rtBlurX);
-            Graphics.Blit(source, rtBlurY, SSAOMaterial, 1);
+            SSAO_mat.SetTexture("_SSAO", rtBlurX);
+            Graphics.Blit(source, rtBlurY, SSAO_mat, 1);
             RenderTexture.ReleaseTemporary(rtBlurX); // blurX RT not needed anymore
 
             rtAO = rtBlurY; // AO is the blurred one now
         }
 
         // Modulate scene rendering with SSAO
-        SSAOMaterial.SetTexture("_SSAO", rtAO);
-        Graphics.Blit(source, destination, SSAOMaterial, 2);
+        SSAO_mat.SetTexture("_SSAO", rtAO);
+        Graphics.Blit(source, destination, SSAO_mat, 2);
 
         RenderTexture.ReleaseTemporary(rtAO);
     }
