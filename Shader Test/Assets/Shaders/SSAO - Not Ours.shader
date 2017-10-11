@@ -17,7 +17,7 @@ Shader "Hidden/SSAO - Not Ours"
 	struct v2f_ao {
 		float4 pos : POSITION;
 		float2 uv : TEXCOORD0;
-		float2 uvr : TEXCOORD1;
+		float2 uvR : TEXCOORD1;
 	};
 
 	uniform float2 _NoiseScale;
@@ -28,7 +28,7 @@ Shader "Hidden/SSAO - Not Ours"
 		v2f_ao o;
 		o.pos = UnityObjectToClipPos(v.vertex);
 		o.uv = TRANSFORM_TEX(v.texcoord, _CameraDepthNormalsTexture);
-		o.uvr = v.texcoord.xy * _NoiseScale;
+		o.uvR = v.texcoord.xy * _NoiseScale;
 		return o;
 	}
 

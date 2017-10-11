@@ -1,7 +1,7 @@
 half frag_ao(v2f_ao i, int sampleCount, float3 samples[INPUT_SAMPLE_COUNT])
 {
     // Gets random normal from noise texture
-    half3 randNormal = tex2D(_RandomTexture, i.uvr).xyz * 2.0 - 1.0;
+    half3 randNormal = tex2D(_RandomTexture, i.uvR).xyz * 2.0 - 1.0;
 
     // Gets depth, view normal and depthNormal
     float4 depthNormal = tex2D(_CameraDepthNormalsTexture, i.uv);
@@ -24,9 +24,9 @@ half frag_ao(v2f_ao i, int sampleCount, float3 samples[INPUT_SAMPLE_COUNT])
         half3 randomDir = reflect(samples[s], randNormal);
 
         // Make it point to the upper hemisphere
-        half flip = (dot(viewNormal, randomDir)<0) ? 1.0 : -1.0;
-        randomDir *= -flip;
-
+		half flip = step(dot(viewNormal, randomDir), 0);
+		randomDir *= 1 - (2 * flip);
+		
         // Adds a bit of normal to reduce self shadowing
 		randomDir += viewNormal * 0.3;
 
@@ -47,11 +47,9 @@ half frag_ao(v2f_ao i, int sampleCount, float3 samples[INPUT_SAMPLE_COUNT])
         float zDepth = saturate(sampleD - sampleDepth);
 
 		// If the Z depth is greater than the minimum required Z depth
-        if (zDepth > _Params.y)
-		{
-            // This sample occludes, contribute to occlusion
-            occ += pow(1 - zDepth, _Params.z);
-        }
+		int addOcc = 1 - step(zDepth, _Params.y);
+		// This sample occludes, contribute to occlusion
+		occ += pow(1 - zDepth, _Params.z) * addOcc;
     }
 
     occ /= sampleCount;
