@@ -1,4 +1,4 @@
-half frag_ao(v2f_ao i, int sampleCount, float3 samples[INPUT_SAMPLE_COUNT])
+half frag_ao(v2f_ao i, int sampleCount, float3 samples[INPUT_SAMPLE_COUNT], float _SampleSpread)
 {
     // Gets random normal from noise texture
     half3 randNormal = tex2D(_RandomTexture, i.uvR).xyz * 2.0 - 1.0;
@@ -21,7 +21,7 @@ half frag_ao(v2f_ao i, int sampleCount, float3 samples[INPUT_SAMPLE_COUNT])
     for (int s = 0; s < sampleCount; ++s)
     {
         // Reflects sample direction around a random vector
-        half3 randomDir = reflect(samples[s], randNormal);
+        half3 randomDir = reflect(samples[s] * _SampleSpread, randNormal);
 
         // Make it point to the upper hemisphere
 		half flip = step(dot(viewNormal, randomDir), 0);

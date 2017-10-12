@@ -65,6 +65,8 @@ public class SSAOEffect : MonoBehaviour
 
         // Sets the scale of the noise by dividing the render textures size with the noises size
         SSAO_mat.SetVector("_NoiseScale", new Vector3((float)rtAO.width / noiseWidth, (float)rtAO.height / noiseHeight, 0.0f));
+
+        SSAO_mat.SetFloat("_SampleSpread", sampleSpread);
         
         SSAO_mat.SetVector("_Params", new Vector4(radius, minZ, 1.0f / occlusionAttenuation, occlusionIntensity));
 
@@ -117,7 +119,7 @@ public class SSAOEffect : MonoBehaviour
             // Scales points to distribute them within the hemisphere with an accelerating interpolation function
             float scale = i / kernelSize;
             scale = Mathf.Lerp(0.1f, 1.0f, scale * scale);
-            samplePoints[i] *= scale * sampleSpread;
+            samplePoints[i] *= scale;
 
             // Adds copy/paste-friendly code with sample points positions to the string
             kernelPrint += string.Format("float3({0}, {1}, {2})\n", samplePoints[i].x, samplePoints[i].y, samplePoints[i].z);
