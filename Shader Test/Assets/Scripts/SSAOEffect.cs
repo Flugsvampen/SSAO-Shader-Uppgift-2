@@ -8,11 +8,11 @@ public class SSAOEffect : MonoBehaviour
 {
     [Range(0, 16)]public int noiseSize = 4;
     [Range(0.05f, 1.0f)]public float radius = 0.4f;
+    [Range(1f, 20f)]public float sampleSpread = 1f;
     [Range(0.1f, 4f)]public float occlusionIntensity = 1.5f;
-    [Range(0f, 4f)]public float blur = 2f;
-    //[Range(1, 6)]public int downsampling = 2;
     [Range(0.2f, 2f)]public float occlusionAttenuation = 1.0f;
-    [Range(0.00001f, 0.5f)]public float minZ = 0.01f;
+    [Range(0f, 4f)]public float blur = 2f;
+    [Range(0.001f, 1f)]public float minZ = 0.01f;
 
     public Material SSAO_mat;
 
@@ -22,12 +22,12 @@ public class SSAOEffect : MonoBehaviour
     void Start()
     {
         //GenerateKernelSamples(26);
-        noiseTex = GenerateNoiseTex();
+        GenerateNoiseTex();
         Camera.main.depthTextureMode |= DepthTextureMode.DepthNormals;
     }
 
 
-    private Texture2D GenerateNoiseTex()
+    private void GenerateNoiseTex()
     {
         Color[] noise = new Color[noiseSize * noiseSize];
 
@@ -38,10 +38,7 @@ public class SSAOEffect : MonoBehaviour
 
         noiseTex = new Texture2D(noiseSize, noiseSize);
         noiseTex.SetPixels(noise);
-
         SSAO_mat.SetTexture("_RandomTexture", noiseTex);
-
-        return noiseTex;
     }
 
 
@@ -120,7 +117,7 @@ public class SSAOEffect : MonoBehaviour
             // Scales points to distribute them within the hemisphere with an accelerating interpolation function
             float scale = i / kernelSize;
             scale = Mathf.Lerp(0.1f, 1.0f, scale * scale);
-            samplePoints[i] *= scale;
+            samplePoints[i] *= scale * sampleSpread;
 
             // Adds copy/paste-friendly code with sample points positions to the string
             kernelPrint += string.Format("float3({0}, {1}, {2})\n", samplePoints[i].x, samplePoints[i].y, samplePoints[i].z);

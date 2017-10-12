@@ -34,6 +34,7 @@ public class SSAOEffect_NotOurs : MonoBehaviour
 
     private static Material CreateMaterial(Shader shader)
     {
+    
         if (!shader)
             return null;
         Material m = new Material(shader);
@@ -48,7 +49,22 @@ public class SSAOEffect_NotOurs : MonoBehaviour
             mat = null;
         }
     }
+    private Texture2D GenerateNoiseTex()
+    {
+        Color[] noise = new Color[noiseSize * noiseSize];
 
+        for (int i = 0; i < noiseSize * noiseSize; i++)
+        {
+            noise[i] = new Color(Random.Range(0.0f, 1.0f), Random.Range(0.0f, 1.0f), 0.0f);
+        }
+
+        m_RandomTexture = new Texture2D(noiseSize, noiseSize);
+        m_RandomTexture.SetPixels(noise);
+
+        m_SSAOMaterial.SetTexture("_RandomTexture", m_RandomTexture);
+
+        return m_RandomTexture;
+    }
 
     void OnDisable()
     {
@@ -89,27 +105,6 @@ public class SSAOEffect_NotOurs : MonoBehaviour
             m_SSAOMaterial = CreateMaterial(m_SSAOShader);
             m_SSAOMaterial.SetTexture("_RandomTexture", GenerateNoiseTex());
         }
-    }
-
-
-    private Texture2D GenerateNoiseTex()
-    {
-        Color[] noise = new Color[noiseSize * noiseSize];
-
-        for (int i = 0; i < noiseSize * noiseSize; i++)
-        {
-            noise[i] = new Color(
-            Random.Range(0.0f, 1.0f),
-            Random.Range(0.0f, 1.0f),
-            0.0f);
-        }
-        m_NoiseTex = new Texture2D(noiseSize, noiseSize);
-
-        m_NoiseTex.SetPixels(noise);
-
-        //SSAOMaterial.SetTexture("_RandomTexture", m_NoiseTex);
-
-        return m_NoiseTex;
     }
 
 
@@ -185,7 +180,7 @@ public class SSAOEffect_NotOurs : MonoBehaviour
         RenderTexture.ReleaseTemporary(rtAO);
     }
 
-    /*
+    
 	private void CreateRandomTable (int count, float minLength)
 	{
 		Random.seed = 1337;
@@ -222,5 +217,5 @@ public class SSAOEffect_NotOurs : MonoBehaviour
 		table += "};\n";
 		Debug.Log (table);
 	}
-	*/
+	
 }

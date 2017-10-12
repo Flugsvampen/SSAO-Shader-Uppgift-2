@@ -45,7 +45,6 @@ half frag_ao(v2f_ao i, int sampleCount, float3 samples[INPUT_SAMPLE_COUNT])
 
 		// Gets normalized Z depth
         float zDepth = saturate(sampleD - sampleDepth);
-
 		// If the Z depth is greater than the minimum required Z depth
 		int addOcc = 1 - step(zDepth, _Params.y);
 		// This sample occludes, contribute to occlusion
