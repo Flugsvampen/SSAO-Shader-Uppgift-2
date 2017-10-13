@@ -26,6 +26,9 @@
 		};
 
 		uniform float2 _NoiseScale;
+		float _NoiseSize;
+		float _NormalDiffFactor;
+		float _DepthDiffFactor;
 		float4 _CameraDepthNormalsTexture_ST;
 		sampler2D _CameraDepthNormalsTexture;
 		sampler2D _RandomTexture;
@@ -87,7 +90,7 @@
 					float3(0.003435674, -0.09547421, 0.02704615),
 					float3(-0.05372969, -0.06047624, 0.05167094),
 					float3(0.01017836, -0.005069511, 0.007873893),
-					float3(0.01668272, -0.08124822, 0.04017327),
+					float3(0.01668272, -0.08124822, 0.04017327)
 				};
 				
 				return frag_ao(i, SAMPLE_COUNT, RAND_SAMPLES, _SampleSpread);
@@ -122,48 +125,64 @@
 
 			sampler2D _SSAO;
 			float2 _SSAO_TexelSize;
-			float3 _TexelOffsetScale;
+			float2 _TexelOffsetScale;
 
-			inline half CheckSame(half4 n, half4 nn)
+			// Returns 1 if it has same depth and normal
+			inline half CheckSame(half4 start, half4 end)
 			{
 				// difference in normals
-				half2 diff = abs(n.xy - nn.xy);
-				half sn = (diff.x + diff.y) < 0.1;
+				half2 diff = abs(start.xy - end.xy);
+
+				// 1 if normals are close enough to being the same
+				half sameNormal = step((diff.x + diff.y), _NormalDiffFactor);
 				// difference in depth
-				float z = DecodeFloatRG(n.zw);
-				float zz = DecodeFloatRG(nn.zw);
-				float zdiff = abs(z - zz) * _ProjectionParams.z;
-				half sz = zdiff < 0.2;
-				return sn * sz;
+				float depthStart = DecodeFloatRG(start.zw);
+				float depthEnd = DecodeFloatRG(end.zw);
+				float depthDiff = abs(depthStart - depthEnd) * _ProjectionParams.z;
+
+				// 1 if depths are close enough to being the same
+				half sameDepth = step(depthDiff, _DepthDiffFactor);
+
+				return sameNormal * sameDepth;
 			}
 
-
-			half4 frag(v2f i) : COLOR
+			
+			half frag(v2f i) : COLOR
 			{
-				#define NUM_BLUR_SAMPLES 4
+				#define NUM_BLUR_SAMPLES _NoiseSize
 
-				float2 o = _TexelOffsetScale.xy;
-
-				half sum = tex2D(_SSAO, i.uv).r * (NUM_BLUR_SAMPLES + 1);
 				half denom = NUM_BLUR_SAMPLES + 1;
+				half sum = tex2D(_SSAO, i.uv).r * denom;
 
 				half4 geom = tex2D(_CameraDepthNormalsTexture, i.uv);
 
 				for (int s = 0; s < NUM_BLUR_SAMPLES; ++s)
 				{
-					float2 nuv = i.uv + o * (s + 1);
-					half4 ngeom = tex2D(_CameraDepthNormalsTexture, nuv.xy);
-					half coef = (NUM_BLUR_SAMPLES - s) * CheckSame(geom, ngeom);
-					sum += tex2D(_SSAO, nuv.xy).r * coef;
+					// Go right/up
+					float2 nextUV = i.uv + _TexelOffsetScale * (s + 1);
+					half4 nextGeom = tex2D(_CameraDepthNormalsTexture, nextUV.xy);
+
+					// 0 if not same normal & depth
+					half coef = (NUM_BLUR_SAMPLES - s) * CheckSame(geom, nextGeom); // checks if normal and depth is the same from _CameraDepthNormalsTexture
+
+
+					// Add the color from the nextUV coordinate to sum
+					sum += tex2D(_SSAO, nextUV.xy).r * coef;
 					denom += coef;
 
-					nuv = i.uv - o * (s + 1);
-					ngeom = tex2D(_CameraDepthNormalsTexture, nuv.xy);
-					coef = (NUM_BLUR_SAMPLES - s) * CheckSame(geom, ngeom);
-					sum += tex2D(_SSAO, nuv.xy).r * coef;
+					// Go left/down
+					nextUV = i.uv - _TexelOffsetScale * (s + 1);
+
+					// Need to do these operations again since we changed nextUV
+					nextGeom = tex2D(_CameraDepthNormalsTexture, nextUV.xy);
+					coef = (NUM_BLUR_SAMPLES - s) * CheckSame(geom, nextGeom); // checks if normal and depth is the same from _CameraDepthNormalsTexture
+					
+					// Add the color from the nextUV coordinate to sum
+					sum += tex2D(_SSAO, nextUV.xy).r * coef;
 					denom += coef;
 				}
 
+				// Return blended/blurred value
 				return sum / denom;
 			}
 			ENDCG
